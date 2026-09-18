@@ -3,90 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Magic Particle Hand</title>
+<title>Finger Magic ✨</title>
 
 <style>
-    * {
-        box-sizing: border-box;
-    }
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #02020a;
+    font-family: Arial;
+    color: white;
+}
 
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #02020a;
-        font-family: Arial, sans-serif;
-        color: white;
-    }
+#video {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    opacity: 0.22;
+}
 
-    #video {
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transform: scaleX(-1);
-        opacity: 0.25;
-    }
+#canvas {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
 
-    #canvas {
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        left: 0;
-        top: 0;
-    }
+.title {
+    position: fixed;
+    top: 25px;
+    width: 100%;
+    text-align: center;
+    z-index: 5;
+}
 
-    .title {
-        position: fixed;
-        top: 25px;
-        left: 0;
-        width: 100%;
-        text-align: center;
-        z-index: 5;
-    }
+.title h1 {
+    margin: 0;
+    font-size: 32px;
+}
 
-    .title h1 {
-        margin: 0;
-        font-size: 32px;
-    }
+.title p {
+    opacity: 0.7;
+}
 
-    .title p {
-        margin-top: 8px;
-        opacity: 0.7;
-    }
-
-    .status {
-        position: fixed;
-        bottom: 25px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 5;
-        padding: 10px 18px;
-        border-radius: 20px;
-        background: rgba(255,255,255,0.12);
-    }
+.status {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.12);
+    z-index: 5;
+}
 </style>
 </head>
 
 <body>
 
 <video id="video" autoplay playsinline></video>
-
 <canvas id="canvas"></canvas>
 
 <div class="title">
-    <h1>✨ Magic Particle Hand</h1>
-    <p>Move your index finger and control the magic</p>
+    <h1>✨ Finger Magic</h1>
+    <p>Move your index finger to create magic</p>
 </div>
 
 <div class="status" id="status">
-    Starting camera...
+    ☝️ Show your index finger
 </div>
-
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-
 
 <script>
 
@@ -97,26 +87,19 @@ const status = document.getElementById("status");
 
 let particles = [];
 
-let targetX = window.innerWidth / 2;
-let targetY = window.innerHeight / 2;
+let fingerX = 0;
+let fingerY = 0;
 
-let previousX = targetX;
-let previousY = targetY;
+let fingerVisible = false;
 
-let handDetected = false;
-
-
-function resizeCanvas() {
-
+function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
 }
 
-resizeCanvas();
+resize();
 
-window.addEventListener("resize", resizeCanvas);
-
+window.addEventListener("resize", resize);
 
 
 /* PARTICLE */
@@ -128,29 +111,27 @@ class Particle {
         this.x = x;
         this.y = y;
 
-        this.vx = (Math.random() - 0.5) * 5;
-        this.vy = (Math.random() - 0.5) * 5;
+        this.vx = (Math.random() - 0.5) * 3;
+        this.vy = (Math.random() - 0.5) * 3;
 
         this.size = Math.random() * 3 + 1;
 
         this.life = 1;
 
-        this.decay = Math.random() * 0.015 + 0.008;
+        this.decay =
+            Math.random() * 0.015 + 0.01;
     }
-
 
     update() {
 
         this.x += this.vx;
         this.y += this.vy;
 
-        this.vx *= 0.96;
-        this.vy *= 0.96;
+        this.vx *= 0.97;
+        this.vy *= 0.97;
 
         this.life -= this.decay;
-
     }
-
 
     draw() {
 
@@ -165,55 +146,42 @@ class Particle {
         );
 
         ctx.fillStyle =
-            `rgba(100,220,255,${this.life})`;
+            `rgba(150,230,255,${this.life})`;
 
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 15;
 
         ctx.shadowColor =
-            "rgba(100,220,255,0.9)";
+            "rgba(100,220,255,1)";
 
         ctx.fill();
 
         ctx.shadowBlur = 0;
-
     }
-
 }
 
 
+/* CREATE MAGIC ONLY AT FINGER */
 
-/* CREATE MAGIC */
+function createFingerMagic(x, y) {
 
-function createMagic(x, y) {
-
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 7; i++) {
 
         particles.push(
-
             new Particle(
-
-                x + (Math.random() - 0.5) * 35,
-
-                y + (Math.random() - 0.5) * 35
-
+                x + (Math.random() - 0.5) * 12,
+                y + (Math.random() - 0.5) * 12
             )
-
         );
-
     }
 
-
-    if (particles.length > 900) {
+    if (particles.length > 500) {
 
         particles.splice(
             0,
-            particles.length - 900
+            particles.length - 500
         );
-
     }
-
 }
-
 
 
 /* ANIMATION */
@@ -228,33 +196,30 @@ function animate() {
     );
 
 
-    if (handDetected) {
+    if (fingerVisible) {
 
-        /*
-        Create particles at
-        CURRENT finger position
-        */
+        /* Magic follows ONLY index finger */
 
-        createMagic(targetX, targetY);
+        createFingerMagic(
+            fingerX,
+            fingerY
+        );
 
 
-        /*
-        Draw a small glowing circle
-        at the current finger position
-        */
+        /* Finger glow */
 
         ctx.beginPath();
 
         ctx.arc(
-            targetX,
-            targetY,
-            8,
+            fingerX,
+            fingerY,
+            7,
             0,
             Math.PI * 2
         );
 
         ctx.fillStyle =
-            "rgba(180,240,255,0.9)";
+            "rgba(255,255,255,1)";
 
         ctx.shadowBlur = 30;
 
@@ -264,22 +229,16 @@ function animate() {
         ctx.fill();
 
         ctx.shadowBlur = 0;
-
     }
 
-
-    /* Update particles */
 
     particles.forEach(p => {
 
         p.update();
-
         p.draw();
 
     });
 
-
-    /* Remove dead particles */
 
     particles =
         particles.filter(
@@ -288,19 +247,16 @@ function animate() {
 
 
     requestAnimationFrame(animate);
-
 }
-
 
 animate();
 
 
-
-/* MEDIAPIPE */
+/* HAND TRACKING */
 
 const hands = new Hands({
 
-    locateFile: (file) => {
+    locateFile: file => {
 
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
 
@@ -308,22 +264,18 @@ const hands = new Hands({
 
 });
 
-
 hands.setOptions({
 
     maxNumHands: 1,
 
     modelComplexity: 1,
 
-    minDetectionConfidence: 0.5,
+    minDetectionConfidence: 0.6,
 
-    minTrackingConfidence: 0.5
+    minTrackingConfidence: 0.6
 
 });
 
-
-
-/* HAND DETECTION */
 
 hands.onResults(results => {
 
@@ -337,47 +289,39 @@ hands.onResults(results => {
 
 
         /*
-        Landmark 8 =
-        Index finger tip
-        */
+         INDEX FINGER TIP = LANDMARK 8
+         */
 
-        const finger =
-            hand[8];
+        const indexTip = hand[8];
 
 
-        /*
-        Convert camera position
-        to screen position
-        */
-
-        targetX =
-            (1 - finger.x) *
+        fingerX =
+            (1 - indexTip.x) *
             canvas.width;
 
-        targetY =
-            finger.y *
+        fingerY =
+            indexTip.y *
             canvas.height;
 
 
-        handDetected = true;
+        fingerVisible = true;
 
 
         status.innerText =
-            "🖐️ Hand detected — Move your finger! ✨";
+            "☝️ Index finger detected — Move it! ✨";
 
     }
 
     else {
 
-        handDetected = false;
+        fingerVisible = false;
 
         status.innerText =
-            "🖐️ Show your hand to the camera";
+            "☝️ Show your index finger";
 
     }
 
 });
-
 
 
 /* CAMERA */
@@ -393,11 +337,9 @@ const camera = new Camera(video, {
     },
 
     width: 1280,
-
     height: 720
 
 });
-
 
 camera.start();
 
