@@ -1,415 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Magic Particle Hand</title>
+<title>Magic Particle Hand</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #050510;
-            font-family: Arial, sans-serif;
-            color: white;
-        }
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #02020a;
+        font-family: Arial, sans-serif;
+        color: white;
+    }
 
-        #video {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-            opacity: 0.25;
-        }
+    #video {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+        opacity: 0.25;
+    }
 
-        #canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
+    #canvas {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+    }
 
-        .title {
-            position: fixed;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            z-index: 5;
-            width: 100%;
-        }
+    .title {
+        position: fixed;
+        top: 25px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        z-index: 5;
+    }
 
-        .title h1 {
-            margin: 0;
-            font-size: 32px;
-        }
+    .title h1 {
+        margin: 0;
+        font-size: 32px;
+    }
 
-        .title p {
-            margin-top: 8px;
-            opacity: 0.7;
-        }
+    .title p {
+        margin-top: 8px;
+        opacity: 0.7;
+    }
 
-        .status {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 5;
-            padding: 10px 18px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(10px);
-            white-space: nowrap;
-        }
-    </style>
+    .status {
+        position: fixed;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        padding: 10px 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.12);
+    }
+</style>
 </head>
 
 <body>
 
-    <video id="video" autoplay playsinline></video>
+<video id="video" autoplay playsinline></video>
 
-    <canvas id="canvas"></canvas>
+<canvas id="canvas"></canvas>
 
-    <div class="title">
-        <h1>✨ Magic Particle Hand</h1>
-        <p>Move your hand and control the magic</p>
-    </div>
+<div class="title">
+    <h1>✨ Magic Particle Hand</h1>
+    <p>Move your index finger and control the magic</p>
+</div>
 
-    <div class="status" id="status">
-        Starting camera...
-    </div>
+<div class="status" id="status">
+    Starting camera...
+</div>
 
 
-    <!-- MediaPipe Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+<script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const status = document.getElementById("status");
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+let particles = [];
 
+let targetX = window.innerWidth / 2;
+let targetY = window.innerHeight / 2;
 
-    <script>
+let previousX = targetX;
+let previousY = targetY;
 
-        const video = document.getElementById("video");
+let handDetected = false;
 
-        const canvas = document.getElementById("canvas");
 
-        const ctx = canvas.getContext("2d");
+function resizeCanvas() {
 
-        const status = document.getElementById("status");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
+}
 
-        let particles = [];
+resizeCanvas();
 
-        window.targetX = window.innerWidth / 2;
+window.addEventListener("resize", resizeCanvas);
 
-        window.targetY = window.innerHeight / 2;
 
-        window.handDetected = false;
 
+/* PARTICLE */
 
-        // Canvas size
+class Particle {
 
-        function resizeCanvas() {
+    constructor(x, y) {
 
-            canvas.width = window.innerWidth;
+        this.x = x;
+        this.y = y;
 
-            canvas.height = window.innerHeight;
+        this.vx = (Math.random() - 0.5) * 5;
+        this.vy = (Math.random() - 0.5) * 5;
 
-        }
+        this.size = Math.random() * 3 + 1;
 
-        resizeCanvas();
+        this.life = 1;
 
-        window.addEventListener("resize", resizeCanvas);
+        this.decay = Math.random() * 0.015 + 0.008;
+    }
 
 
-        // Particle class
+    update() {
 
-        class Particle {
+        this.x += this.vx;
+        this.y += this.vy;
 
-            constructor(x, y) {
+        this.vx *= 0.96;
+        this.vy *= 0.96;
 
-                this.x = x;
+        this.life -= this.decay;
 
-                this.y = y;
+    }
 
-                this.vx = (Math.random() - 0.5) * 8;
 
-                this.vy = (Math.random() - 0.5) * 8;
+    draw() {
 
-                this.size = Math.random() * 3 + 1;
+        ctx.beginPath();
 
-                this.life = 1;
+        ctx.arc(
+            this.x,
+            this.y,
+            this.size,
+            0,
+            Math.PI * 2
+        );
 
-                this.maxLife = 1;
+        ctx.fillStyle =
+            `rgba(100,220,255,${this.life})`;
 
-            }
+        ctx.shadowBlur = 18;
 
+        ctx.shadowColor =
+            "rgba(100,220,255,0.9)";
 
-            update(targetX, targetY) {
+        ctx.fill();
 
-                const dx = targetX - this.x;
+        ctx.shadowBlur = 0;
 
-                const dy = targetY - this.y;
+    }
 
+}
 
-                this.vx += dx * 0.004;
 
-                this.vy += dy * 0.004;
 
+/* CREATE MAGIC */
 
-                this.vx *= 0.94;
+function createMagic(x, y) {
 
-                this.vy *= 0.94;
+    for (let i = 0; i < 15; i++) {
 
+        particles.push(
 
-                this.x += this.vx;
+            new Particle(
 
-                this.y += this.vy;
+                x + (Math.random() - 0.5) * 35,
 
+                y + (Math.random() - 0.5) * 35
 
-                this.life -= 0.012;
+            )
 
-            }
+        );
 
+    }
 
-            draw() {
 
-                ctx.beginPath();
+    if (particles.length > 900) {
 
-                ctx.arc(
-                    this.x,
-                    this.y,
-                    this.size,
-                    0,
-                    Math.PI * 2
-                );
+        particles.splice(
+            0,
+            particles.length - 900
+        );
 
+    }
 
-                ctx.fillStyle =
-                    `rgba(120, 220, 255, ${this.life})`;
+}
 
 
-                ctx.shadowBlur = 15;
 
-                ctx.shadowColor = "rgba(100, 220, 255, 0.8)";
+/* ANIMATION */
 
-                ctx.fill();
+function animate() {
 
-                ctx.shadowBlur = 0;
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
-            }
 
-        }
+    if (handDetected) {
 
+        /*
+        Create particles at
+        CURRENT finger position
+        */
 
-        // Create particles around finger
+        createMagic(targetX, targetY);
 
-        function createParticles(x, y) {
 
-            for (let i = 0; i < 10; i++) {
+        /*
+        Draw a small glowing circle
+        at the current finger position
+        */
 
-                const particle = new Particle(
+        ctx.beginPath();
 
-                    x + (Math.random() - 0.5) * 40,
+        ctx.arc(
+            targetX,
+            targetY,
+            8,
+            0,
+            Math.PI * 2
+        );
 
-                    y + (Math.random() - 0.5) * 40
+        ctx.fillStyle =
+            "rgba(180,240,255,0.9)";
 
-                );
+        ctx.shadowBlur = 30;
 
-                particles.push(particle);
+        ctx.shadowColor =
+            "rgba(100,220,255,1)";
 
-            }
+        ctx.fill();
 
+        ctx.shadowBlur = 0;
 
-            // Limit particles
+    }
 
-            if (particles.length > 1000) {
 
-                particles.splice(
-                    0,
-                    particles.length - 1000
-                );
+    /* Update particles */
 
-            }
+    particles.forEach(p => {
 
-        }
+        p.update();
 
+        p.draw();
 
-        // Animation
+    });
 
-        function animate() {
 
-            ctx.clearRect(
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
+    /* Remove dead particles */
 
+    particles =
+        particles.filter(
+            p => p.life > 0
+        );
 
-            if (window.handDetected) {
 
-                createParticles(
-                    window.targetX,
-                    window.targetY
-                );
+    requestAnimationFrame(animate);
 
-            }
+}
 
 
-            particles.forEach(p => {
+animate();
 
-                p.update(
-                    window.targetX,
-                    window.targetY
-                );
 
-                p.draw();
 
-            });
+/* MEDIAPIPE */
 
+const hands = new Hands({
 
-            particles =
-                particles.filter(
-                    p => p.life > 0
-                );
+    locateFile: (file) => {
 
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
 
-            requestAnimationFrame(animate);
+    }
 
-        }
+});
 
 
-        // Start animation
+hands.setOptions({
 
-        animate();
+    maxNumHands: 1,
 
+    modelComplexity: 1,
 
-        // MediaPipe Hands
+    minDetectionConfidence: 0.5,
 
-        const hands = new Hands({
+    minTrackingConfidence: 0.5
 
-            locateFile: (file) => {
+});
 
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
 
-            }
 
+/* HAND DETECTION */
+
+hands.onResults(results => {
+
+    if (
+        results.multiHandLandmarks &&
+        results.multiHandLandmarks.length > 0
+    ) {
+
+        const hand =
+            results.multiHandLandmarks[0];
+
+
+        /*
+        Landmark 8 =
+        Index finger tip
+        */
+
+        const finger =
+            hand[8];
+
+
+        /*
+        Convert camera position
+        to screen position
+        */
+
+        targetX =
+            (1 - finger.x) *
+            canvas.width;
+
+        targetY =
+            finger.y *
+            canvas.height;
+
+
+        handDetected = true;
+
+
+        status.innerText =
+            "🖐️ Hand detected — Move your finger! ✨";
+
+    }
+
+    else {
+
+        handDetected = false;
+
+        status.innerText =
+            "🖐️ Show your hand to the camera";
+
+    }
+
+});
+
+
+
+/* CAMERA */
+
+const camera = new Camera(video, {
+
+    onFrame: async () => {
+
+        await hands.send({
+            image: video
         });
 
+    },
 
-        hands.setOptions({
+    width: 1280,
 
-            maxNumHands: 1,
+    height: 720
 
-            modelComplexity: 1,
-
-            minDetectionConfidence: 0.6,
-
-            minTrackingConfidence: 0.6
-
-        });
+});
 
 
-        // Hand detection result
+camera.start();
 
-        hands.onResults(results => {
-
-
-            if (
-
-                results.multiHandLandmarks &&
-
-                results.multiHandLandmarks.length > 0
-
-            ) {
-
-
-                const hand =
-                    results.multiHandLandmarks[0];
-
-
-                // Index finger tip
-
-                const finger =
-                    hand[8];
-
-
-                // Convert camera coordinates
-
-                const x =
-                    (1 - finger.x) *
-                    canvas.width;
-
-
-                const y =
-                    finger.y *
-                    canvas.height;
-
-
-                // Update target continuously
-
-                window.targetX = x;
-
-                window.targetY = y;
-
-                window.handDetected = true;
-
-
-                status.innerText =
-                    "🖐️ Hand detected — Magic activated!";
-
-
-            }
-
-            else {
-
-
-                window.handDetected = false;
-
-
-                status.innerText =
-                    "🖐️ Show your hand to the camera";
-
-            }
-
-        });
-
-
-        // Camera
-
-        const camera = new Camera(video, {
-
-            onFrame: async () => {
-
-                await hands.send({
-                    image: video
-                });
-
-            },
-
-            width: 1280,
-
-            height: 720
-
-        });
-
-
-        camera.start();
-
-
-    </script>
+</script>
 
 </body>
 </html>
